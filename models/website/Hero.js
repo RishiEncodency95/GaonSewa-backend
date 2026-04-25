@@ -20,6 +20,11 @@ const heroSchema = new mongoose.Schema({
     image: {
         url: String,
         public_id: String
+    },
+    status: {
+        type: String,
+        enum: ['Active', 'Inactive'],
+        default: 'Active'
     }
 }, { timestamps: true });
 

@@ -3,8 +3,14 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 
+import authRoutes from "./routes/authRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
 import heroRoutes from "./routes/website/heroRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 import cloudinary from "./utils/cloudinary.js";
+import companyRoutes from "./routes/superAdmin/companyRoutes.js";
+import qs from "qs";
 
 import path from "path";
 import { fileURLToPath } from "url";
@@ -20,7 +26,13 @@ app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/orders", orderRoutes);
 app.use("/api/hero", heroRoutes);
+app.use("/api/users", userRoutes);
+// super admin
+app.use("/api/companies", companyRoutes);
 
 
 mongoose.connect(process.env.MONGO_URI)

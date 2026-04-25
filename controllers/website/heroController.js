@@ -11,12 +11,23 @@ export const getHero = async (req, res) => {
     }
 };
 
+export const getHeroById = async (req, res) => {
+    try {
+        const hero = await Hero.findById(req.params.id);
+        if (!hero) {
+            return res.status(404).json({ message: "Hero not found" });
+        }
+        res.status(200).json(hero);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
 export const createOrUpdateHero = async (req, res) => {
-    const { title, subtitle, description, buttonName, buttonLink } = req.body;
+    const { title, subtitle, description, buttonName, buttonLink, status } = req.body;
 
     try {
         let hero = await Hero.findOne();
-        
+
         let imageData = null;
         if (req.file) {
             const result = await uploadOnCloudinary(req.file.path);
@@ -41,7 +52,8 @@ export const createOrUpdateHero = async (req, res) => {
             hero.description = description || hero.description;
             hero.buttonName = buttonName || hero.buttonName;
             hero.buttonLink = buttonLink || hero.buttonLink;
-            
+            hero.status = status || hero.status;
+
             if (imageData) {
                 hero.image = imageData;
             }
@@ -56,7 +68,8 @@ export const createOrUpdateHero = async (req, res) => {
                 description,
                 buttonName,
                 buttonLink,
-                image: imageData
+                image: imageData,
+                status
             });
             return res.status(201).json({ message: "Hero created successfully", hero });
         }
@@ -80,3 +93,16 @@ export const deleteHero = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+export const updateHero = async (req, res) => {
+    try {
+        const hero = await Hero.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!hero) {
+            return res.status(404).json({ message: "Hero not found" });
+        }
+        res.status(200).json(hero);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
