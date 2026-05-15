@@ -31,11 +31,11 @@ const userSchema = new mongoose.Schema({
         ref: 'Branch',
         index: true
     },
-    role: [{
-        type: String,
-        enum: ['Admin', 'Customer', 'Super Admin'],
-        default: 'Customer'
-    }],
+    role: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'AdminRole',
+        required: [true, 'User role is required']
+    },
     status: {
         type: String,
         enum: ['Active', 'Inactive'],

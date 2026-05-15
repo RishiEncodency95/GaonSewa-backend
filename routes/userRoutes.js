@@ -8,6 +8,7 @@ import {
     deleteUser
 } from '../controllers/userController.js';
 import { protect, isAdminOrSuperAdmin, isSuperAdmin } from '../middleware/authMiddleware.js';
+import upload from '../middleware/multer.js';
 
 const router = express.Router();
 
@@ -19,11 +20,11 @@ router.get('/branch/:branchId', isAdminOrSuperAdmin, getUsersByBranch);
 // CRUD
 router.route('/')
     .get(isAdminOrSuperAdmin, getAllUsers)
-    .post(isAdminOrSuperAdmin, createUser);
+    .post(isAdminOrSuperAdmin, upload.single('profileImage'), createUser);
 
 router.route('/:id')
     .get(isAdminOrSuperAdmin, getUserById)
-    .patch(isAdminOrSuperAdmin, updateUser)
+    .patch(isAdminOrSuperAdmin, upload.single('profileImage'), updateUser)
     .delete(isSuperAdmin, deleteUser);
 
 export default router;

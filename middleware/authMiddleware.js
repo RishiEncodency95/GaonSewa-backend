@@ -15,8 +15,8 @@ export const protect = async (req, res, next) => {
         // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Check if user still exists
-        const currentUser = await User.findById(decoded.id);
+        // Check if user still exists and populate role
+        const currentUser = await User.findById(decoded.id).populate('role');
         if (!currentUser) {
             return res.status(401).json({ message: 'The user belonging to this token no longer exists.' });
         }
@@ -38,20 +38,19 @@ export const restrictTo = (module, action) => {
     return async (req, res, next) => {
         try {
             // Super Admin bypasses all checks
-            if (req.user.isSuperAdmin) return next();
-
-            // Populate roles if not already populated
-            const userWithRoles = await req.user.populate('roles');
-            const roles = userWithRoles.roles;
-
-            if (!roles || roles.length === 0) {
-                return res.status(403).json({ message: 'No roles assigned to this user.' });
+            // Role is already populated in protect middleware
+            const userRole = req.user.role;
+            
+            if (!userRole) {
+                return res.status(403).json({ message: 'No role assigned to this user.' });
             }
 
-            // Check if any role has the required permission
-            const hasPermission = roles.some(role => {
-                return role.permissions && role.permissions[module] && role.permissions[module][action];
-            });
+            // Super Admin check (dynamic based on role slug)
+            if (userRole.role === 'Super Admin') return next();
+
+            // Role Rights implementation (if using RoleRights model)
+            // For now, let's assume we check the role's permissions object
+            const hasPermission = userRole.permissions && userRole.permissions[module] && userRole.permissions[module][action];
 
             if (!hasPermission) {
                 return res.status(403).json({ 
@@ -68,7 +67,7 @@ export const restrictTo = (module, action) => {
 
 // Only SuperAdmin can access
 export const isSuperAdmin = (req, res, next) => {
-    if (!req.user || !req.user.isSuperAdmin) {
+    if (!req.user || !req.user.role || req.user.role.role !== 'Super Admin') {
         return res.status(403).json({ message: 'Access denied. Super Admin only.' });
     }
     next();
@@ -76,7 +75,8 @@ export const isSuperAdmin = (req, res, next) => {
 
 // Branch Admin or SuperAdmin can access
 export const isAdminOrSuperAdmin = (req, res, next) => {
-    if (!req.user) return res.status(401).json({ message: 'Not authenticated.' });
-    if (req.user.isSuperAdmin || req.user.role === 'Admin') return next();
+    if (!req.user || !req.user.role) return res.status(401).json({ message: 'Not authenticated or no role.' });
+    const roleSlug = req.user.role.role;
+    if (roleSlug === 'Super Admin' || roleSlug === 'Admin') return next();
     return res.status(403).json({ message: 'Access denied. Admin or Super Admin only.' });
 };

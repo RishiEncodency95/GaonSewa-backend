@@ -42,7 +42,14 @@ const branchSchema = new mongoose.Schema({
     type: String,
     enum: ["Active", "Inactive"],
     default: "Active"
-  }
+  },
+  added_by: {
+    type: String,
+    default: 'Admin'
+  },
+  updated_by: {
+    type: String
+  },
 
 }, { timestamps: true });
 

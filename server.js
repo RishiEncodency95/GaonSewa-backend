@@ -2,7 +2,6 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
-
 import authRoutes from "./routes/authRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
@@ -10,6 +9,10 @@ import heroRoutes from "./routes/website/heroRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import cloudinary from "./utils/cloudinary.js";
 import companyRoutes from "./routes/superAdmin/companyRoutes.js";
+import roleRoutes from "./routes/add_by_admin/roleRoutes.js";
+import sidebarRoutes from "./routes/add_by_admin/sidebarRoutes.js";
+import roleRightsRoutes from "./routes/add_by_admin/role_rights/roleRightsRoutes.js";
+import activityLogRoutes from "./routes/activity/activityLogRoutes.js";
 import qs from "qs";
 
 import path from "path";
@@ -33,7 +36,11 @@ app.use("/api/hero", heroRoutes);
 app.use("/api/users", userRoutes);
 // super admin
 app.use("/api/companies", companyRoutes);
-
+// admin roles
+app.use("/api/roles", roleRoutes);
+app.use("/api/role-rights", roleRightsRoutes);
+app.use("/api/sidebars", sidebarRoutes);
+app.use("/api/activity-logs", activityLogRoutes);
 
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("DB Connected"))
