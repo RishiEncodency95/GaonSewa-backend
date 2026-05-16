@@ -32,6 +32,10 @@ const sidebarSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    sectionOrder: {
+        type: Number,
+        default: 0
+    },
     added_by: {
         type: String,
         default: 'Admin'

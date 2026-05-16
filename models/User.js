@@ -42,7 +42,16 @@ const userSchema = new mongoose.Schema({
         default: 'Active'
     },
     lastLogin: Date
-}, { timestamps: true });
+}, { 
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+});
+
+// Virtual for isSuperAdmin
+userSchema.virtual('isSuperAdmin').get(function() {
+    return this.role && this.role.role === 'Super Admin';
+});
 
 // Hash password before saving
 userSchema.pre('save', async function () {

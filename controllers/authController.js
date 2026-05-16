@@ -31,13 +31,14 @@ export const signup = async (req, res) => {
       name,
       email,
       password,
-      role: role || ["Customer"],
+      role,
       companyId,
       branchId
     });
 
     const token = signToken(user);
 
+    await user.populate("role");
     user.password = undefined;
 
     res.status(201).json({
@@ -79,6 +80,7 @@ export const login = async (req, res) => {
     // update last login
     user.lastLogin = Date.now();
     await user.save({ validateBeforeSave: false });
+    await user.populate("role");
 
     user.password = undefined;
 

@@ -13,7 +13,7 @@ export const createSidebar = async (req, res) => {
 // Get all Sidebar items
 export const getSidebars = async (req, res) => {
     try {
-        const sidebars = await Sidebar.find().sort({ order: 1 });
+        const sidebars = await Sidebar.find().sort({ sectionOrder: 1, order: 1 });
         res.status(200).json({ success: true, data: sidebars });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
