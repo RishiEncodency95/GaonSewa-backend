@@ -1,16 +1,17 @@
 import User from '../models/User.js';
+import cloudinary from '../utils/cloudinary.js';
+import fs from 'fs';
 
 // ── GET all users ────────────────────────────────────────────────
 // SuperAdmin → all; Admin → own branch only
 export const getAllUsers = async (req, res) => {
     try {
         let filter = {};
-        if (!req.user.isSuperAdmin) {
+        const isSuperAdmin = req.user.role && req.user.role.role === 'Super Admin';
+        if (!isSuperAdmin) {
             filter = { branchId: req.user.branchId, companyId: req.user.companyId };
         }
         const users = await User.find(filter)
-            .populate('companyId', 'name')
-            .populate('branchId', 'name')
             .populate('role')
             .sort({ createdAt: -1 });
         res.status(200).json({ status: 'success', results: users.length, data: { users } });
@@ -64,7 +65,11 @@ export const createUser = async (req, res) => {
         // 🔥 Handle Profile Image
         let finalProfileImage = profileImage;
         if (req.file) {
-            finalProfileImage = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            const result = await cloudinary.uploader.upload(req.file.path, {
+                folder: "users"
+            });
+            finalProfileImage = result.secure_url;
+            fs.unlink(req.file.path, (err) => { if (err) console.error(err); });
         }
 
         // 🔥 Handle nested address JSON if sent as string (from FormData)
@@ -80,6 +85,20 @@ export const createUser = async (req, res) => {
         // Admin cannot create another Admin
         if (!req.user.isSuperAdmin && role === 'Admin') {
             return res.status(403).json({ status: 'fail', message: 'Admin cannot create another Admin.' });
+        }
+
+        // 🔥 Email Uniqueness Check
+        const existingEmail = await User.findOne({ email });
+        if (existingEmail) {
+            return res.status(400).json({ status: 'fail', message: 'Email is already registered. Please use a different email address.' });
+        }
+
+        // 🔥 Phone Uniqueness Check
+        if (phone) {
+            const existingPhone = await User.findOne({ phone });
+            if (existingPhone) {
+                return res.status(400).json({ status: 'fail', message: 'Phone number is already registered. Please use a different phone number.' });
+            }
         }
 
         const user = await User.create({
@@ -100,15 +119,62 @@ export const createUser = async (req, res) => {
     }
 };
 
+// ── Helper: extract Cloudinary public_id from URL ──────────────────
+const getCloudinaryPublicId = (url) => {
+    if (!url || !url.includes('cloudinary.com')) return null;
+    // URL format: https://res.cloudinary.com/<cloud>/image/upload/v123456/users/filename.jpg
+    const parts = url.split('/');
+    const uploadIndex = parts.indexOf('upload');
+    if (uploadIndex === -1) return null;
+    // Skip the version segment (v123456) and join the rest without extension
+    const relevantParts = parts.slice(uploadIndex + 2); // skip 'upload' + version
+    const publicIdWithExt = relevantParts.join('/');
+    const publicId = publicIdWithExt.replace(/\.[^/.]+$/, ''); // remove extension
+    return publicId;
+};
+
 // ── UPDATE user ──────────────────────────────────────────────────
 export const updateUser = async (req, res) => {
     try {
         // Strip password – use dedicated password-change endpoint if needed
         const { password, address, ...updateData } = req.body;
 
-        // 🔥 Handle Profile Image
+        // 🔥 Handle Profile Image: delete old from Cloudinary, upload new
         if (req.file) {
-            updateData.profileImage = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            // Find existing user to get old image URL
+            const existingUser = await User.findById(req.params.id).select('profileImage');
+            if (existingUser?.profileImage) {
+                const publicId = getCloudinaryPublicId(existingUser.profileImage);
+                if (publicId) {
+                    try {
+                        await cloudinary.uploader.destroy(publicId);
+                    } catch (delErr) {
+                        console.error('Old image delete error:', delErr.message);
+                    }
+                }
+            }
+            // Upload new image to Cloudinary
+            const result = await cloudinary.uploader.upload(req.file.path, {
+                folder: "users"
+            });
+            updateData.profileImage = result.secure_url;
+            fs.unlink(req.file.path, (err) => { if (err) console.error(err); });
+        }
+
+        // 🔥 Email Uniqueness Check on Update
+        if (updateData.email) {
+            const existingEmail = await User.findOne({ email: updateData.email, _id: { $ne: req.params.id } });
+            if (existingEmail) {
+                return res.status(400).json({ status: 'fail', message: 'Email is already registered by another user. Please use a different email address.' });
+            }
+        }
+
+        // 🔥 Phone Uniqueness Check on Update
+        if (updateData.phone) {
+            const existingPhone = await User.findOne({ phone: updateData.phone, _id: { $ne: req.params.id } });
+            if (existingPhone) {
+                return res.status(400).json({ status: 'fail', message: 'Phone number is already registered by another user. Please use a different phone number.' });
+            }
         }
 
         // 🔥 Handle nested address JSON if sent as string

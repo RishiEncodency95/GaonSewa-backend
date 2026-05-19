@@ -13,6 +13,7 @@ import roleRoutes from "./routes/add_by_admin/roleRoutes.js";
 import sidebarRoutes from "./routes/add_by_admin/sidebarRoutes.js";
 import roleRightsRoutes from "./routes/add_by_admin/role_rights/roleRightsRoutes.js";
 import activityLogRoutes from "./routes/activity/activityLogRoutes.js";
+import locationRoutes from "./routes/locationRoutes.js";
 import qs from "qs";
 
 import path from "path";
@@ -41,6 +42,7 @@ app.use("/api/roles", roleRoutes);
 app.use("/api/role-rights", roleRightsRoutes);
 app.use("/api/sidebars", sidebarRoutes);
 app.use("/api/activity-logs", activityLogRoutes);
+app.use("/api/locations", locationRoutes);
 
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("DB Connected"))

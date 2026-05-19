@@ -38,10 +38,11 @@ const seedSuperAdmin = async () => {
     // 4. Check if user exists
     const existingUser = await User.findOne({ email: superAdminData.email });
     if (existingUser) {
-      console.log('User already exists! Updating roles...');
+      console.log('User already exists! Updating roles and password...');
       existingUser.role = superAdminRole._id;
+      existingUser.password = superAdminData.password;
       await existingUser.save();
-      console.log('User roles updated successfully! ✅');
+      console.log('User roles and password updated successfully! ✅');
     } else {
       // Create User
       await User.create(superAdminData);
