@@ -4,8 +4,14 @@ import fs from "fs";
 
 export const getHero = async (req, res) => {
     try {
-        const hero = await Hero.findOne();
-        res.status(200).json(hero);
+        const filter = {};
+
+        if (req.query.status) {
+            filter.status = req.query.status;
+        }
+
+        const heroes = await Hero.find(filter).sort({ createdAt: -1 });
+        res.status(200).json(heroes);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -26,8 +32,6 @@ export const createOrUpdateHero = async (req, res) => {
     const { title, subtitle, description, buttonName, buttonLink, status } = req.body;
 
     try {
-        let hero = await Hero.findOne();
-
         let imageData = null;
         if (req.file) {
             const result = await uploadOnCloudinary(req.file.path);
@@ -39,40 +43,21 @@ export const createOrUpdateHero = async (req, res) => {
                 // Delete local file
                 fs.unlinkSync(req.file.path);
             } else {
-                // If cloudinary fails, we might still have the local file, 
-                // but for now let's just return an error or fallback
                 return res.status(500).json({ message: "Cloudinary upload failed" });
             }
         }
 
-        if (hero) {
-            // Update existing
-            hero.title = title || hero.title;
-            hero.subtitle = subtitle || hero.subtitle;
-            hero.description = description || hero.description;
-            hero.buttonName = buttonName || hero.buttonName;
-            hero.buttonLink = buttonLink || hero.buttonLink;
-            hero.status = status || hero.status;
+        const hero = await Hero.create({
+            title,
+            subtitle,
+            description,
+            buttonName,
+            buttonLink,
+            image: imageData,
+            status
+        });
 
-            if (imageData) {
-                hero.image = imageData;
-            }
-
-            await hero.save();
-            return res.status(200).json({ message: "Hero updated successfully", hero });
-        } else {
-            // Create new
-            hero = await Hero.create({
-                title,
-                subtitle,
-                description,
-                buttonName,
-                buttonLink,
-                image: imageData,
-                status
-            });
-            return res.status(201).json({ message: "Hero created successfully", hero });
-        }
+        return res.status(201).json({ message: "Hero created successfully", hero });
     } catch (error) {
         // Cleanup local file on error
         if (req.file && fs.existsSync(req.file.path)) {
@@ -95,14 +80,44 @@ export const deleteHero = async (req, res) => {
 };
 
 export const updateHero = async (req, res) => {
+    const { title, subtitle, description, buttonName, buttonLink, status } = req.body;
+
     try {
-        const hero = await Hero.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updateData = {
+            title,
+            subtitle,
+            description,
+            buttonName,
+            buttonLink,
+            status
+        };
+
+        Object.keys(updateData).forEach((key) => {
+            if (updateData[key] === undefined) delete updateData[key];
+        });
+
+        if (req.file) {
+            const result = await uploadOnCloudinary(req.file.path);
+            if (result) {
+                updateData.image = {
+                    url: result.secure_url,
+                    public_id: result.public_id
+                };
+                fs.unlinkSync(req.file.path);
+            } else {
+                return res.status(500).json({ message: "Cloudinary upload failed" });
+            }
+        }
+
+        const hero = await Hero.findByIdAndUpdate(req.params.id, updateData, { new: true });
         if (!hero) {
             return res.status(404).json({ message: "Hero not found" });
         }
         res.status(200).json(hero);
     } catch (error) {
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
         res.status(500).json({ message: error.message });
     }
 };
-
